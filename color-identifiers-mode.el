@@ -57,11 +57,6 @@
           (run-with-idle-timer 5 t 'color-identifiers:refresh)))
   )
 
-(defvar-local color-identifiers:colorize-behavior nil
-  "For internal use. Stores the element of
-`color-identifiers:modes-alist' that is relevant to the current
-major mode")
-
 ;;;###autoload
 (define-minor-mode color-identifiers-mode
   "Color the identifiers in the current buffer based on their names."
@@ -602,6 +597,11 @@ For Emacs Lisp support within color-identifiers-mode."
 
 
 ;;; PACKAGE INTERNALS ==========================================================
+
+(defvar-local color-identifiers:colorize-behavior nil
+  "For internal use. Stores the element of
+`color-identifiers:modes-alist' that is relevant to the current
+major mode")
 
 (defvar color-identifiers:colors nil
   "List of generated hex colors for internal use.")
