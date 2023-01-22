@@ -369,54 +369,44 @@ arguments, loops (for .. in), or for comprehensions."
                   (nil font-lock-variable-name-face tree-sitter-hl-face:variable))))
 
 ;; Emacs Lisp
-(defun color-identifiers:elisp-declarations-in-sexp (sexp)
-  "Extract a list of identifiers declared in SEXP.
+(defun color-identifiers:elisp-declarations-in-sexp (sexp table)
+  "Extract a list of identifiers declared in SEXP and add them to TABLE.
 For Emacs Lisp support within color-identifiers-mode."
   (pcase sexp
     ((or `(let . ,rest) `(let* . ,rest))
      ;; VARLIST of let/let* could be like ((a 1) b c (d "foo")).
-     (append (when (listp (car rest))
-               (mapcar (lambda (var) (if (symbolp var) var (car var))) (car rest)))
-             (color-identifiers:elisp-declarations-in-sexp rest)))
-    ((or `(defun ,_ ,args . ,rest) `(lambda ,args . ,rest))
-     (append (when (listp args) args)
-             (color-identifiers:elisp-declarations-in-sexp rest)))
-    (`nil nil)
-    ((pred consp)
-     (let ((cons sexp)
-           (result nil))
-       (while (consp cons)
-         (let ((ids (color-identifiers:elisp-declarations-in-sexp (car cons))))
-           (when ids
-             (setq result (append ids result))))
-         (setq cons (cdr cons)))
-       (when cons
-         ;; `cons' is non-nil but also non-cons
-         (let ((ids (color-identifiers:elisp-declarations-in-sexp cons)))
-           (when ids
-             (setq result (append ids result)))))
-       result))))
+     (let ((vars (when (listp (car rest))
+                   (mapcar (lambda (var) (if (symbolp var) var (car var))) (car rest)))))
+       (dolist (var vars) (puthash var t table))
+       (color-identifiers:elisp-declarations-in-sexp rest table))
+     ((or `(defun ,_ ,args . ,rest) `(lambda ,args . ,rest))
+      (let ((vars (when (listp args) args)))
+        (dolist (var vars) (puthash var t table))
+        (color-identifiers:elisp-declarations-in-sexp rest table)))
+     (`nil nil)
+     ((pred consp)
+      (let ((cons sexp))
+        (while (consp cons)
+          (color-identifiers:elisp-declarations-in-sexp (car cons) table)
+          (setq cons (cdr cons)))
+        (when cons
+          (color-identifiers:elisp-declarations-in-sexp cons table)))))))
 
 (defun color-identifiers:elisp-get-declarations ()
   "Extract a list of identifiers declared in the current buffer.
 For Emacs Lisp support within color-identifiers-mode."
-  (let ((result nil))
+  (let ((table (make-hash-table :test 'equal)))
     (save-excursion
       (goto-char (point-min))
       (condition-case nil
           (while t
             (condition-case nil
+                ;; TBM: remove this let*
                 (let* ((sexp (read (current-buffer)))
-                       (ids (color-identifiers:elisp-declarations-in-sexp sexp))
-                       (strs (-filter 'identity
-                                      (mapcar (lambda (id)
-                                                (when (symbolp id) (symbol-name id)))
-                                              ids))))
-                  (setq result (append strs result)))
+                       (ids (color-identifiers:elisp-declarations-in-sexp sexp table))))
               (invalid-read-syntax nil)))
-        (end-of-file nil)))
-    (delete-dups result)
-    result))
+        (end-of-file nil))
+      (hash-table-keys table))))
 
 (color-identifiers:set-declaration-scan-fn
  'emacs-lisp-mode 'color-identifiers:elisp-get-declarations)
