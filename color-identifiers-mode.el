@@ -77,15 +77,18 @@ major mode")
             (progn
               (print "Major mode is not supported by color-identifiers, disabling")
               (color-identifiers-mode -1))
+          (setq color-identifiers:color-index-for-identifier (make-hash-table :test 'equal))
           (color-identifiers:regenerate-colors)
           (color-identifiers:refresh)
           (add-to-list 'font-lock-extra-managed-props 'color-identifiers:fontified)
           (font-lock-add-keywords nil '((color-identifiers:colorize . default)) t)
           (color-identifiers:enable-timer)
           (ad-activate 'enable-theme)))
+    ;; disabling the mode
     (when color-identifiers:timer
       (cancel-timer color-identifiers:timer))
     (font-lock-remove-keywords nil '((color-identifiers:colorize . default)))
+    (setq color-identifiers:color-index-for-identifier nil)
     (ad-deactivate 'enable-theme))
   (color-identifiers:refontify))
 
@@ -657,7 +660,7 @@ Colors are output to `color-identifiers:colors'."
                       (apply 'color-rgb-to-hex rgb)))
                   chosens)))))
 
-(defvar-local color-identifiers:color-index-for-identifier (make-hash-table :test 'equal)
+(defvar-local color-identifiers:color-index-for-identifier nil
   "Hashtable of identifier-index pairs for internal use.
 The index refers to `color-identifiers:colors'. Only used when
 `color-identifiers-coloring-method' is `sequential'.")
