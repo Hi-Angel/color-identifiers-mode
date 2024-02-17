@@ -1,5 +1,6 @@
 ;;; -*- lexical-binding: t -*-
 (require 'ert)
+(require 'cl-seq)
 (require 'color-identifiers-mode)
 
 (defvar color-identifiers:c-mode-text
@@ -161,3 +162,20 @@ identifers are highlighted as expected"
 (ert-deftest test-python-mode-hash ()
   (setq color-identifiers-coloring-method 'hash)
   (color-identifiers:test-mode #'python-mode color-identifiers:python-mode-text))
+
+(ert-deftest test-enable/disable ()
+  (load-theme 'adwaita)
+  (c-mode) ;; an arbitrary mode supported by color-identifiers
+  (color-identifiers-mode 1)
+  (should color-identifiers:colors)
+  (let ((theme1-colors color-identifiers:colors))
+    (print color-identifiers:colors)
+    (load-theme 'deeper-blue)
+    (font-lock-ensure)
+    ;; check that theme change caused colors to regenerate
+    (should (cl-set-exclusive-or theme1-colors color-identifiers:colors))
+    (let ((theme2-colors color-identifiers:colors))
+      (color-identifiers-mode -1)
+      (load-theme 'adwaita)
+      ;; theme change should no longer influence colors as the mode is disabled
+      (should-not (cl-set-exclusive-or theme2-colors color-identifiers:colors)))))
