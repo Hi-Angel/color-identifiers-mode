@@ -749,7 +749,11 @@ major mode, identifiers are saved to
 (defun color-identifiers:refontify ()
   "Refontify the buffer using font-lock."
   (if (fboundp 'font-lock-flush)
-      (font-lock-flush)
+      (progn
+        (font-lock-flush)
+        ;; Remove unnecessary indirection by making the function an alias. So this
+        ;; whole body effectively gets called just once.
+        (defalias 'color-identifiers:refontify 'font-lock-flush))
     ;; `font-lock-flush' didn't exist prior to Emacs 25.1
     (with-no-warnings
       (and font-lock-mode (font-lock-fontify-buffer)))))
